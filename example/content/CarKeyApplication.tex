@@ -1,0 +1,262 @@
+\section{Car Key Application}
+
+\subsection{Setting up a Secure Connection and Authentication (user -- company)}
+
+In this section, we will discuss measures taken to secure the messages exchange used in the Car Key Application between the company and user (smartphone application). We will design our own security scheme from existing security algorithms and protocols. %However, we will not make use of standardised protocols such as TSL because we want to make the least possible amount of assumptions about underlying layers and because newer security features such as SHA-3 (Keccak) are generally not yet part of these standards.
+
+\subsubsection{Secure Connection Set-up\label{SecureConnectionSetUp}}
+
+We will use ECDH (elliptic curve Diffie-Hellman) for public key exchange. Both parties should generate a new random public/private key pair for every connection such that a secure connection can be set up with a new symmetric key for each session. After setting up, both parties can identify one another and start the required transactions. We will make use of the scheme that is depicted in \cref{AsymKeyExchange}.
+
+
+\begin{figure}[!ht]
+  \renewcommand{\Bx}{8}
+  \setcounter{CC}{0}
+  \centering
+  \begin{tikzpicture}
+    \node at (0,\theCC) {A};
+    \node at (\Bx,\theCC) {B}; \nextline
+    \draw[{Stealth[scale=2.0]}-{Stealth[scale=2.0]}] (0,-\theCC) -- (\Bx,-\theCC) node[midway,above] {$(p, a, b, n, G)$}; \nextline
+    \node at (0,-\theCC) {$(d_A,Q_A)$};
+    \node at (\Bx,-\theCC) {$(d_B,Q_B)$}; \nextline
+    \draw[-{Stealth[scale=2.0]}] (0,-\theCC) -- (\Bx,-\theCC) node[midway, above] {$[Q_A\parallel N_A]$}; \nextline
+    \draw[{Stealth[scale=2.0]}-] (0,-\theCC) -- (\Bx,-\theCC) node[midway, above] {$[Q_B \parallel N_A\parallel N_B]$}; \nextline
+    \node at (0,-\theCC) {$K_S = Q_B d_A$};
+    \node at (\Bx,-\theCC) {$K_S = Q_A d_B$}; \nextline
+    \draw[-{Stealth[scale=2.0]}] (0,-\theCC) -- (\Bx,-\theCC) node[midway, above] {$[E(K_S,N_B)\parallel H(N_B\parallel Q_A\parallel Q_B)]$}; \nextline
+  \end{tikzpicture}
+  \caption{Asymmetric key exchange using ECDH and nonces to ensure connection freshness}
+  \label{AsymKeyExchange}
+\end{figure}
+
+First, A (client) and B (server) must agree on a set of global parameters for the encryption scheme. The parameters for ECDH are $(p, a, b, n, G)$ where $p$ is a large prime number that offers 128~bits security (e.g.\ a Montgomery curve with prime number $2^{255}-19$), $a$ and $b$ define the elliptic curve and $n$ is the order of the origin $G$. These parameters can be fixed beforehand in the car key application on the smartphone and on the server such that a negotiation phase is not required. Second, both parties must generate an ephemeral key pair $(d_i,Q_i),\ i=A,B$. Subsequently, they send their public keys to one another ($Q_A, Q_B$) and also include a nonce to ensure that the connection is fresh. After receiving the other party's public key, the symmetric key $K_S=Q_id_j;\ i,j=A,B \land i\ne j$ can be computed. As a consequence, a secure connection has been set up. Finally, to prevent spoofed IP attacks (assuming global parameters have been fixed beforehand), the client (A) must send the encrypted nonce and the hashed nonce with both public keys appended to the server (B). The server will not perform the computationally intensive task to obtain $K_S$ before receiving a reply from A and checking the hash-value.
+
+The above scheme assures that both parties are not engaging in a replay attack and that a secure channel is created using $K_S$ as a symmetric key. Since we also want to achieve authentication, we will need to take additional measures to ensure both parties are legitimate.
+
+The above scheme is very general and works for any key size. The derived key $K_S$ can be too long (e.g.\ 64~bytes). Since AES-128 requires a key of only 128~bits, we will hash the obtained value with SHA3-256. The upper 128~bits will be used as symmetric key and the lower 128~bits as GCM nonce.
+
+\subsubsection{Authentication (user -- company)}
+
+Verification whether both parties are who they claim they are, will be done using a set of certificates. The user must generate a new certificate specifically for this application using his/hers personal identity card (eID). We will assume that the service operates in Belgium and that the customer (user) has a Belgian eID. This eID is equipped with a 2048-bit RSA module (PKCS~\#11 and PKCS~\#1-1.5) that can generate 2048-bit signatures. We will denote the RSA-signing scheme by $S(PR_i,data)$. Where data is hashed with SHA3-256 in case of the company and SHA-1 in the user's case\footnote{The Belgian eID uses SHA1 (160 bits), this we cannot change. However, for the company we can still use SHA3-256.}. This 2048-bit RSA system results in only 112~bits security for the authentication step.
+
+\Cref{AuthStep} depicts the initial authentication step. First the user (A) sends a certificate request $C_A$ to the server (B). The server authenticates this challenge using his private RSA-key and appends his public key certificate such that the client can verify the server. Now, the user is assured he is communicating with the authentic server. Afterwards, the user needs to authenticate himself to the server. He does so by signing a modified version ($Ct'$) of the certificate $Ct$\footnote{What these modifications mean exactly will be discussed further on. For now, it suffices to say these are minor modifications.} sent by the server with his public key. He also appends his public key certificate, since the server does not know it yet, and the modified certificate. The server is assured that the owner of the public key certificate sent the certificate request $C_A$ if the name in the certificate request $C_A$ matches the name in the public key certificate ($\overline{PU_A}$). The server responds by authenticating this message. After this final message, the \emph{user verification certificate} ($UVC=[S(PR_B,Ct'\parallel S(PR_A,Ct'))\parallel S(PR_A,Ct')\parallel Ct'\parallel \overline{PU_A}]$) is created. It must be securely stored by the client for further verification if he tries to set up a new session at another time.
+
+\begin{figure}[!ht]
+  \renewcommand{\Bx}{8}
+  \setcounter{CC}{0}
+  \centering
+  \begin{tikzpicture}
+    \node at (0,\theCC) {A};
+    \node at (\Bx,\theCC) {B};
+    \draw[rounded corners] (-0.5,\theCC-0.5) rectangle (\Bx+0.5,\theCC+0.5);
+    \node[above] at (\Bx/2,\theCC+0.5) {$K_S$};  \nextline\nextline
+    \draw[-{Stealth[scale=2.0]}] (0,-\theCC) -- (\Bx,-\theCC) node[midway,above] {[$C_A$]}; \nextline
+    \draw[{Stealth[scale=2.0]}-] (0,-\theCC) -- (\Bx,-\theCC) node[midway,above] {$[S(PR_B,C_A)\parallel \overline{PU_B} \parallel Ct]$};
+    \node[left] at (0,-\theCC) {verify $\overline{PU_B}$}; \nextline
+	\draw[-{Stealth[scale=2.0]}] (0,-\theCC) -- (\Bx,-\theCC) node[midway,above] {$[S(PR_A,Ct') \parallel C_t' \parallel\overline{PU_A}]$};
+	\node[right] at(\Bx,-\theCC) {verify $\overline{PU_A}$}; \nextline
+    \draw[{Stealth[scale=2.0]}-] (0,-\theCC) -- (\Bx,-\theCC) node[midway, above] {$[S(PR_B, Ct' \parallel S(PR_A,Ct'))]$}; \nextline
+  \end{tikzpicture}
+  \caption{Authentication step for initial setup}
+  \label{AuthStep}
+\end{figure}
+
+We cannot always assume the user has access to a computer and an eID card reader when trying to verify himself. This is why we created a UVC in the initial verification step. As depicted in \cref{ReauthStep}, the server is assured that the user is who he claims he is, because of the UVC and the certificate that is included. The certificate conforms the issuer's and recipient's identity and validity period. This will only have been created if both parties were confident they were communicating with legitimate identities (see \cref{AuthStep}).
+
+In \cref{ReauthStep}, the user first sends an authorisation request $M_A$ to the server when re-authentication is required (e.g.\ new connection). The server authenticates itself by encrypting this request with his private key. The user must have stored the public key (certificate) of B to be able to decrypt the received message. As a result, B does not need to transmit his public key certificate. After verifying the server, A can identify himself to the server by sending the previously obtained UVC. The server is assured of the identity of A because of the initial authentication step. He will only have signed $[E(PR_A,Ct')]$ if he was positive about the identity of A. %We do not need to resend the certificate $Ct'$ since this will be stored by the company on its servers.
+
+After authentication, the application specific communication can start. This will be discussed in a subsequent section.
+
+\begin{figure}[!ht]
+  \renewcommand{\Bx}{8}
+  \setcounter{CC}{0}
+  \centering
+  \begin{tikzpicture}
+    \node at (0,\theCC) {A};
+    \node at (\Bx,\theCC) {B};
+    \draw[rounded corners] (-0.5,\theCC-0.5) rectangle (\Bx+0.5,\theCC+0.5);
+    \node[above] at (\Bx/2,\theCC+0.5) {$K_S$};  \nextline\nextline
+    \draw[-{Stealth[scale=2.0]}] (0,-\theCC) -- (\Bx,-\theCC) node[midway, above] {$[M_A]$}; \nextline
+    \draw[{Stealth[scale=2.0]}-] (0,-\theCC) -- (\Bx,-\theCC) node[midway, above] {$[S(PR_B,M_A)]$};
+    \node[left] at (0,-\theCC) {verify B}; \nextline
+    \draw[-{Stealth[scale=2.0]}] (0,-\theCC) -- (\Bx,-\theCC) node[midway, above] {$[\text{OK}\parallel UVC]$};
+    \node[right] at(\Bx,-\theCC) {verify A};
+  \end{tikzpicture}
+  \caption{Reauthentication using obtained signature from \cref{AuthStep}}
+  \label{ReauthStep}
+\end{figure}
+
+\subsection{User -- Company Interaction}
+
+\subsubsection{Uploading Driving License}
+
+The company wants to make sure drivers are holders of a legitimate driving license. Drivers (users) will have to upload their signed driving license to the secure company servers for verification and storage. This process must be executed before a car can be booked.
+
+\begin{figure}[!ht]
+  \renewcommand{\Bx}{8}
+  \setcounter{CC}{0}
+  \centering
+  \begin{tikzpicture}
+    \node at (0,\theCC) {A};
+    \node at (\Bx,\theCC) {B};
+    \draw[rounded corners] (-0.5,\theCC-0.5) rectangle (\Bx+0.5,\theCC+0.5);
+    \node[above] at (\Bx/2,\theCC+0.5) {$K_S$};  \nextline\nextline
+    \draw[{Stealth[scale=2.0]}-] (0,-\theCC) -- (\Bx,-\theCC) node[midway, above] {$[DLR]$}; \nextline
+    \draw[-{Stealth[scale=2.0]}] (0,-\theCC) -- (\Bx,-\theCC) node[midway, above] {$[S(d_A^P,Q_A^P,DLF)\parallel DLF]$}; \nextline
+    \draw[{Stealth[scale=2.0]}-] (0,-\theCC) -- (\Bx,-\theCC) node[midway, above] {$[S(d_B^P,Q_B^P,DLF \parallel S(d_A^P,Q_A^P,DLF))\parallel \overline{Q_B^P}]$};
+  \end{tikzpicture}
+  \caption{Uploading a signed driving license}
+  \label{DriversLicense}
+\end{figure}
+
+Uploading a driving license will be done according to \cref{DriversLicense}. If the company (B) has an expired driving license copy or no copy on its servers, a \emph{driving license request} (DLR) is sent to the user (A). If the user agrees to this request, he will enter some information of his driving license into a form and take pictures of this license to prove validity. These are collected into a driving license file $DLF$. This file is signed by the user and uploaded to the servers. On receipt of this file, the company checks validity and signs it too. This signature is transferred back to the user with the public key certificate (needed if it is not embedded in the smartphone application).
+
+\subsubsection{Booking a Car\label{ObtaingCOC}}
+
+When the user wants to book a car, permission needs to be granted by the company. If permitted, to user will obtain a Car Open Certificate (COC) that grants him access to the vehicle.
+
+The time has come to revise the modified creating of the UVC. The user (A) did not encrypt the original certificate, but a modified version. It is important to highlight these changes for the subsequent discussion. The user has re-encrypted the certificate with a newly generated key pair; $(d_A^P, Q_A^P)$ where $P$ (permanent) denotes that these should be maintained for the validity of $Ct$. The user also appends the public key $Q_A^P$ to form $Ct'$. Consequently, $Ct'$ is $[S(d_A^P,Q_A^P,Ct) \parallel Q_A^P \parallel C_t]$.
+
+\begin{figure}[!ht]
+  \renewcommand{\Bx}{10}
+  \setcounter{CC}{0}
+  \centering
+  \begin{tikzpicture}
+    \node at (0,\theCC) {A};
+    \node at (\Bx,\theCC) {B};
+    \draw[rounded corners] (-0.5,\theCC-0.5) rectangle (\Bx+0.5,\theCC+0.5);
+    \node[above] at (\Bx/2,\theCC+0.5) {$K_S$};  \nextline\nextline
+    \draw[-{Stealth[scale=2.0]}] (0,-\theCC) -- (\Bx,-\theCC) node[midway, above] {$[REQ]$}; \nextline
+    \draw[{Stealth[scale=2.0]}-] (0,-\theCC) -- (\Bx,-\theCC) node[midway, above] {$[GNT \parallel \overline{Q_C^P}]$}; \nextline
+    \draw[-{Stealth[scale=2.0]}] (0,-\theCC) -- (\Bx,-\theCC) node[midway, above] {$[S(d_A^P,Q_A^P,GNT)]$}; \nextline
+    \draw[{Stealth[scale=2.0]}-] (0,-\theCC) -- (\Bx,-\theCC) node[midway, above] {$[S(d_B^P,Q_B^P,GNT \parallel S(d_A^P,Q_A^P,GNT))]$};
+  \end{tikzpicture}
+  \caption{Booking a car and obtaining a COC}
+  \label{ObtainCOC}
+\end{figure}
+
+\Cref{ObtainCOC} shows how to obtain a COC. First, the user (A) sends his request $REQ$ to book a car. The company (B) then decides whether a car is available or not. If one is available, a grant $GNT$ is sent. The user then signs this grant, and so does the company with the newly generated key pairs. After this final signing operation, a COC is obtained: $COC = [S(d_B^P,Q_B^P,GNT \parallel S(d_A^P,Q_A^P,GNT))\parallel S(d_A^P,Q_A^P,GNT) \parallel GNT \parallel Q_A^P]$. With this COC, the user will be able to open the car he was assigned to. The user cannot modify the $GNT$ to unlock other cars, because he cannot know the private key $d_B^P$ of the company. The ECC public key certificate of the car ($\overline{Q_C^P}$) is also appended to the grant because the user wants to be assured of the car identity beforehand.
+
+\subsection{Setting up a Secure Connection and Authentication (user -- car)}
+
+In this section, we will discuss measures taken to secure the message exchange used in the Car~Key Application between the user (smartphone application) and car. If applicable, we will reuse schemes designed in the previous section.
+
+Again, we need to first set up a secure communications channel between the user and the car. We can reuse the scheme from \cref{AsymKeyExchange}. The operations involved should be manageable by the constrained embedded hardware in the car. After creating a symmetric key, one would expect authentication. However, since we cannot assume the smartphone (user) to be trustworthy, nor can we assume that the car is internet connected. We will need alternative solutions for verification. This is where the COC comes in.
+
+The opening of a car with a COC is composed of two aspects: the presence of the company's ECC public key certificate ($\overline{Q_B^P}$) in the embedded car software and the COC~certificate obtained by the user in which the company assures that this specific user should be able to access the car. How this certificate is obtained and constructed, is discussed in \cref{ObtaingCOC}. The combination of these two enables the car to verify a user. However, the user might also want to verify the car. How both parties verify each other is shown in \cref{CarUserVerification}.
+
+In \cref{CarUserVerification} user/car authentication is performed. First, the user sends an authentication request $M_A$ to the car. The car replies by signing this request. The user can verify it using the public key certificate $\overline{Q_C^P}$ embedded in the COC. After verification of the car, the COC can be sent by the user to the car.
+
+\begin{figure}[!ht]
+  \renewcommand{\Bx}{8}
+  \setcounter{CC}{0}
+  \centering
+  \begin{tikzpicture}
+    \node at (0,\theCC) {A};
+    \node at (\Bx,\theCC) {C};
+    \draw[rounded corners] (-0.5,\theCC-0.5) rectangle (\Bx+0.5,\theCC+0.5);
+    \node[above] at (\Bx/2,\theCC+0.5) {$K_S$};  \nextline\nextline
+    \draw[-{Stealth[scale=2.0]}] (0,-\theCC) -- (\Bx,-\theCC) node[midway, above] {$[M_A]$}; \nextline
+    \draw[{Stealth[scale=2.0]}-] (0,-\theCC)  node[left] {authenticate C} -- (\Bx,-\theCC) node[midway, above] {$[S(d_C^P,Q_C^P,M_A)]$}; \nextline
+    \draw[-{Stealth[scale=2.0]}] (0,-\theCC) -- (\Bx,-\theCC) node[midway, above] {$[COC]$} node[right] {authenticate A}; \nextline
+  \end{tikzpicture}
+  \caption{Authentication in user/car communications channel}
+  \label{CarUserVerification}
+\end{figure}
+
+
+\subsection{Car -- User Interaction}
+
+\begin{figure}[!ht]
+  \renewcommand{\Bx}{8}
+  \setcounter{CC}{0}
+  \centering
+  \begin{tikzpicture}
+    \node at (0,\theCC) {A};
+    \node at (\Bx,\theCC) {C};
+    \draw[rounded corners] (-0.5,\theCC-0.5) rectangle (\Bx+0.5,\theCC+0.5);
+    \node[above] at (\Bx/2,\theCC+0.5) {$K_S$};  \nextline\nextline
+    \draw[-{Stealth[scale=2.0]}] (0,-\theCC) -- (\Bx,-\theCC) node[midway, above] {$[X]$}; \nextline
+    \draw[{Stealth[scale=2.0]}-] (0,-\theCC) -- (\Bx,-\theCC) node[midway, above] {$[S(d_C^P,Q_C^P,M)\parallel M]$};
+    \node[right] at (\Bx,-\theCC) {$M = [T\parallel L \parallel N \parallel X]$};\nextline
+    \draw[-{Stealth[scale=2.0]}] (0,-\theCC) -- (\Bx,-\theCC) node[midway, above] {$[S(d_A^P,Q_A^P,M\parallel S(d_C^P,Q_C^P,M))]$} node[right] {car takes action}; \nextline
+  \end{tikzpicture}
+  \caption{Interacting with the car}
+  \label{XCar}
+\end{figure}
+
+\Cref{XCar} depicts the general scheme that is used for actions involving opening, starting or closing a car. The user (A) wants the car (C) to perform action $X$, so he sends this action to the car (after authentication of the user, see \cref{CarUserVerification}). This can be over Bluetooth (available in almost all smartphones), ad-hoc Wi-Fi or other wireless communication systems. When everything is OK, the car sends an authenticated message $M$ back with time $T$, location $L$, sequence number $N$ and an action indicator $X$. The car signs the hashed message $M$ with its own key pair and the user answers by also signing the message $M$ and the signature of the car. This way, he signals the car that he agrees with the time and location. The car takes action $X$ when it receives this message. From this time on the user has to e.g.\ pay for car usage.
+
+The action indicator $X$ is typically $OPEN$, $CLOSE$ or $START$. When closing the car, the car will include the location log instead of a single location.
+
+The message $M$ is always signed by both parties. If the user would fail to sign it, the action is not taken. This assures non-repudiation in case of an accident for instance.
+
+It is important to note that we assume synchronised clocks between car and smartphone (user) for the time-stamping. The car must be equipped with a GPS module to acquire its location and the current time. Most modern smartphones are also equipped with a GPS module and internet connectivity, making this assumption a very slight one.
+
+
+\subsection{Company -- Car Communication}
+
+When in maintenance, the company must be able to alter internal settings and retrieve data from the internal systems. This can be done either by means of a physical connection or by means of a wireless connection. In both cases, a secure connection is necessary. The establishment scheme is depicted in \cref{AsymKeyExchange} and discussed in \cref{SecureConnectionSetUp}.
+
+Following this step, a scheme similar to \cref{AuthStep} is used. Subsequently, the company and car will identify themselves as is depicted in \cref{CarMaintenance}. After authentication, the actual message transfer can occur. Since the company issued the software, there is no need to take additional security measures for messages in the secure AES-128-channel.
+
+\begin{figure}[!ht]
+  \renewcommand{\Bx}{8}
+  \setcounter{CC}{0}
+  \centering
+  \begin{tikzpicture}
+    \node at (0,\theCC) {B};
+    \node at (\Bx,\theCC) {C};
+    \draw[rounded corners] (-0.5,\theCC-0.5) rectangle (\Bx+0.5,\theCC+0.5);
+    \node[above] at (\Bx/2,\theCC+0.5) {$K_S$};  \nextline\nextline
+    \draw[-{Stealth[scale=2.0]}] (0,-\theCC) -- (\Bx,-\theCC) node[midway, above] {$[IDM]$}; \nextline
+    \draw[{Stealth[scale=2.0]}-] (0,-\theCC) -- (\Bx,-\theCC) node[midway, above] {$[S(d_C^P,Q_C^P,IDM)]$};
+    \node[left] at (0,-\theCC) {authenticate car};\nextline
+    \draw[-{Stealth[scale=2.0]}] (0,-\theCC) -- (\Bx,-\theCC) node[midway, above] {$[S(d_B^M,Q_B^M,IDM\parallel S(d_C^P,Q_C^P,IDM))]$} node[right] {authenticate company}; \nextline
+  \end{tikzpicture}
+  \caption{Car maintenance}
+  \label{CarMaintenance}
+\end{figure}
+
+The authentication scheme from \cref{CarMaintenance} is very simple: first the company sends an identification message IDM: $IDM = [ID\parallel N]$, this includes the identification command ($ID$) and a nonce $N$. After authentication, root access is granted by C (car) to B (company).
+The company~(D) uses a set of maintenance keys ($d_B^M$,$Q_B^M$) for signing. These are different from the ECC~keys used by the company in previous sections.
+
+During maintenance, logs can be retrieved to verify user messages, car status etc. Software updates are not allowed. This is only possible if the newly installed software is authenticated by the hardware manufacturing company. This trusted third-party ensures validity of the software. A discussing on a concrete implementation for this functionality involves specific hardware and is beyond the scope of this report.
+
+\subsection{Billing}
+
+A mobile payment system must be available for billing. We opt for the most used system in Belgium, \emph{Ogone} from the company Ingenico Group. The start cost is \euro{300} and the cost per month is \euro{65}. Per transaction you must pay \euro{0.37}. Adding fraud detection (3-D Secure), which is an additional \euro{200} per month and requires a transaction cost of 0.37\% of the total sum, prevents fraud by means of a card reader or a digipas in combination with a pin code only known by the client. This way non-repudiation is achieved by this billing system \cite{Ogone,Newance}.
+
+We rely on a third party service, because implementing all technical details involved with online banking is a tremendous task if we wish to support most popular payment methods. This also contributes to additional privacy for users, since a financial and merchant data are separated through this trusted third party. The trust level is also expected to be higher since users will recognise the widely used Ogone payment system from other applications \cite{Billing-General}.
+
+Billing will be performed in several steps: before a $COC$ is issued, the company will block the (typical) maximum cost of the $GNT$ on the users credit card. After the user has no longer need of the service, the actual transaction will occur.
+
+The final billing is based on data provided by the user and car: the smartphone application will upload all exchange messages between user and car to the company servers. Based on this data, billing is done. To assure all messages were transferred (and the user did not withhold any), the general scheme depicted in \cref{FinalLogExchange} is used.
+
+\begin{figure}[!ht]
+  \renewcommand{\Bx}{7}
+  \renewcommand{\Cx}{14}
+  \setcounter{CC}{0}
+  \centering
+  \begin{tikzpicture}
+    \node at (0,\theCC) {B};
+    \node at (\Bx,\theCC) {A};
+    \node at (\Cx,\theCC) {C};
+    \draw[rounded corners] (-0.5,\theCC-0.5) rectangle (\Bx+0.5,\theCC+0.5);
+    \draw[rounded corners] (-0.5+\Bx,\theCC-0.5) rectangle (\Cx+0.5,\theCC+0.5);
+    \node[above] at (\Bx/2,\theCC+0.5) {$K_S$};
+    \node[above] at (\Bx+\Cx/4,\theCC+0.5) {$K_S'$}; \nextline\nextline
+    \draw[{Stealth[scale=2.0]}-] (0,-\theCC) -- (\Bx,-\theCC) node[midway, above] {$[STOP]$}; \nextline
+    \draw[-{Stealth[scale=2.0]}] (0,-\theCC) -- (\Bx,-\theCC) node[midway, above] {$[S(d_B^P,Q_B^P,STOP\parallel N)\parallel STOP\parallel N]$}; \nextline
+    \draw[-{Stealth[scale=2.0]}] (\Bx,-\theCC) -- (\Cx,-\theCC) node[midway, above] {$[S(d_B^P,Q_B^P,STOP\parallel N)\parallel STOP\parallel N]$}; \nextline
+     \draw[{Stealth[scale=2.0]}-] (\Bx,-\theCC) -- (\Cx,-\theCC) node[midway, above] {$[S(d_C^P,Q_C^P,M)\parallel M]$}; \nextline
+     \draw[{Stealth[scale=2.0]}-] (0,-\theCC) -- (\Bx,-\theCC) node[midway, above,text width=6cm] {$[S(d_A^P,Q_A^P,M\parallel S(d_C^P,Q_C^P,M))\parallel S(d_C^P,Q_C^P,M)\parallel M]$}; \nextline
+     \draw[-{Stealth[scale=2.0]}] (\Bx,-\theCC) -- (\Cx,-\theCC) node[midway, above,text width=6cm] {$[S(d_A^P,Q_A^P, M\parallel S(d_C^P,Q_C^P,M))\parallel S(d_C^P,Q_C^P,M)]$}; \nextline
+     \draw[-{Stealth[scale=2.0]}] (0,-\theCC) -- (\Bx,-\theCC) node[midway, above,text width=6cm] {$[S(d_B^P,Q_B^P,M\parallel S(d_C^P,Q_C^P,M) \parallel S(d_A^P,Q_A^P,M\parallel S(d_C^P,Q_C^P,M)))]$}; \nextline
+          \draw[-{Stealth[scale=2.0]}] (\Bx,-\theCC) -- (\Cx,-\theCC) node[midway, above,text width=6cm] {$[S(d_B^P,Q_B^P,M\parallel S(d_C^P,Q_C^P,M) \parallel S(d_A^P,Q_A^P,M\parallel S(d_C^P,Q_C^P,M)))]$};
+  \end{tikzpicture}
+  \caption{Log exchange by all parties before billing}
+  \label{FinalLogExchange}
+\end{figure}
+
+First the user (A) indicates he wishes to end the service with a $STOP$ message. The company (B) then generates a nonce to insure freshness and signs this combination. This message is then sent to the car. After checking validity, the car prepares a message $M$. This message contains a hash value over all log messages associated (and exchanged) with the user ($H(log)$), the final sequence number $N'$ and a timestamp $T$: $M=[T \parallel N' \parallel H(log)]$. This message is authenticated by all parties and concludes the service time for a certain COC. The car must maintain $M$ in its memory until the COC expires, because otherwise the user might attempt (and succeed) to open the car. However, access should only be revoked after reception of the signature signed by all parties, since the user might not forward/sign the reply. Also, after the car receives this final signature, the log of this user can be deleted (do remark that $M$ must remain in memory and that the intermediate signatures need to be received by the car and company to enable signature verification in the final step).

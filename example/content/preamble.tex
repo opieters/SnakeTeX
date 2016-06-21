@@ -1,0 +1,114 @@
+\documentclass[11pt, a4paper, english]{article} % document type and language
+
+% load all required packages
+
+% general
+\usepackage[l2tabu,orthodox]{nag}  % force newer (and safer) LaTeX commands
+\usepackage[utf8]{inputenc}        % set character set to UTF-8 (unicode)
+\usepackage{babel}                 % multi-language support
+\usepackage{sectsty}               % allow redefinition of section command formatting
+\usepackage{xcolor}                % more color options
+\usepackage{tocloft}               % redefine table of contents and define new like list
+\usepackage{titling}
+\usepackage{polski}
+
+% misc
+\usepackage{todonotes} % add to do notes
+\usepackage{float}     % floats
+\usepackage{makecell}
+\usepackage{cite}
+
+% science
+\usepackage{amsmath}                                    % extensive math options
+\usepackage{amssymb}                                    % special math symbols
+\usepackage[Gray,squaren,thinqspace,thinspace]{SIunits} % elegant units
+\usepackage{listings}
+
+% NEEDS to be before hyperref, hyperref
+% number figures, tables and equations within the sections
+\numberwithin{equation}{section}
+\numberwithin{figure}{section}
+\numberwithin{table}{section}
+
+% references and annotation
+\usepackage[small,bf,hang]{caption}        % captions
+\usepackage{subcaption}                    % adds subfigure, subcaption
+\usepackage{hyperref}                      % add hyperlinks to references
+\usepackage[noabbrev,nameinlink]{cleveref} % better references than default \ref
+\usepackage{autonum}                       % only number referenced equations
+\usepackage{url}                           % urls
+\usepackage[gen]{eurosym}                  % euro symbol
+
+% drawing
+\usepackage{tikz}          % advanced vector graphics
+\usepackage{circuitikz}    % draw electrical circuits
+\usepackage{pgfplots}      % data plotting
+\usepackage{pgfplotstable} % table plotting
+\usepackage{placeins}      % display floats in correct sections
+\usepackage{graphicx}      % include external graphics
+\usepackage{booktabs}
+
+% format hyperlinks
+\colorlet{linkcolour}{black}
+\colorlet{urlcolour}{blue}
+\hypersetup{colorlinks=true,linkcolor=linkcolour,citecolor=linkcolour,urlcolor=urlcolour}
+
+% define tables with fixed column width
+\newcolumntype{L}[1]{>{\raggedright\let\newline\\\arraybackslash\hspace{0pt}}m{#1}}
+\newcolumntype{C}[1]{>{\centering\let\newline\\\arraybackslash\hspace{0pt}}m{#1}}
+\newcolumntype{R}[1]{>{\raggedleft\let\newline\\\arraybackslash\hspace{0pt}}m{#1}}
+
+% missing math commands
+\providecommand{\abs}[1]{\left\lvert#1\right\rvert}
+\providecommand{\br}[1]{{\left(#1\right)}}
+\providecommand{\sbr}[1]{\left[#1\right]}
+\providecommand{\ddfrac}[2]{\frac{\displaystyle #1}{\displaystyle #2}}
+\providecommand{\eq}{=}
+
+% define logos and trademarks
+\providecommand{\MATLAB}[0]{MATLAB\textsuperscript{\textregistered}}
+
+% paragraph indentation
+\setlength{\parindent}{0cm}
+
+% whitespace between paragraphs
+\setlength{\parskip}{2ex plus 0.5ex minus 0.2ex}
+
+% set page margins
+\setlength\paperwidth{20.999cm}
+\setlength\paperheight{29.699cm}
+\setlength\voffset{-1in}
+\setlength\hoffset{-1in}
+\setlength\topmargin{1.499cm}
+\setlength\headheight{12pt}
+\setlength\headsep{1cm}
+\setlength\footskip{1.131cm}
+\setlength\textheight{25cm}
+\setlength\oddsidemargin{2.499cm}
+\setlength\textwidth{15.999cm}
+\setlength{\cftbeforesecskip}{15pt}
+
+% default path for figures
+\graphicspath{{Figures/}}
+
+% use most recent version of pgfplots
+\pgfplotsset{compat=newest}
+\usetikzlibrary{shapes.misc, positioning,arrows.meta,calc,decorations.markings,math,arrows.meta}
+
+% for block diagrams
+\tikzset{
+    block/.style = {draw, fill=white, rectangle, minimum height=3em, minimum width=2cm},
+    tmp/.style = {coordinate},
+    sum/.style = {draw, fill=white, circle, node distance=1cm},
+    input/.style = {coordinate},
+    output/.style = {coordinate},
+}
+
+% sample definitions
+\newcommand{\Bx}{8}
+\newcommand{\Cx}{8}
+\newcounter{CC}\newcommand{\nextline}{\stepcounter{CC}}
+
+% ensure no floats from previous section in the current one.
+%\let\oldsubsection\subsection
+%\renewcommand{\subsection}[1]{\FloatBarrier\oldsubsection{#1}}

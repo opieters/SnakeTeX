@@ -1,0 +1,35 @@
+\section{General Security Considerations}
+
+The previous section stated different requirements for the communication links and data being sent. Now we must select appropriate standards to fulfil these requirements. We will discuss different standards, their advantages and disadvantages.
+
+\subsection{Asymmetric Encryption Scheme}
+
+One of the major considerations to make is whether to make use of elliptic-curve cryptography (ECC), integer-factorisation cryptography (IFC, e.g.\ RSA) or finite-field cryptography (FFC, e.g.\ DH, DSA).
+
+The security we are considering involves embedded hardware (i.e.\ the hardware present in the car) and the generally less powerful hardware (compared to a personal computer) of a typical smartphone. Since we want to make a future-proof security implementation, we need to take into account key scaling, computational complexity\ldots\ If we allow for these, we observe that IFC and FFC will require 3072-bit keys for 128 security bits compared to only 256 to 383 bits for ECC. If we would require 192 bits of security, we would even need a 7680-bit key for IFC and FFC. This is in stark contrast to a 384 to 511-bit key for ECC \cite[p.\ 53]{NIST-key-management}. It is obvious that storing several IFC/FFC keys will require a considerable amount of storage.
+
+However, key size is not the only important aspect to choose a certain public key mechanism. We must also take the computational feasibility into account. As IFC/FFC requires rather large primes, its key generation will be slower compared to the ECC key generation. Nonetheless, RSA public-key operations are more efficient than those with ECC \cite{Atmel-ECC-vs-RSA}.
+
+The additional computation time involved in public-key operations of ECC is a clear disadvantage compared to the IFC/FFC equivalent. Even so, we will select ECC as our main asymmetric cryptography mechanism of choice because of its smaller keys and better scalability in the near and mid-term future (assumed no fundamental weakness is discovered in ECC, of course).
+
+A key-strength of 128 security bits should suffice for use through 2030 and beyond \cite[p.\ 55-56]{NIST-key-management}. We will not use a longer key, since we also require our applications to be sufficiently responsive (fast) and longer keys result in longer delays for encryption and decryption.
+
+If we apply an asymmetric encryption, we will denote it by means of the $E(key,data)$ function. $key$ specifies the key used in the encryption (public or private) and data is the data digest. For ECC~cryptography, $d_i$ denotes the private key and $Q_i$ the public key for user $i$. For RSA, we will use another notation to distinguish it from ECC. $PU_i$, $PR_i$ denote the public and private keys respectively. The public key certificates of both encryption standards are always denoted by their corresponding public keys with a bar on top: $\overline{Q_i}$, $\overline{PU_i}$.
+
+\subsection{Symmetric Encryption}
+
+Our symmetric encryption scheme of choice is AES-128 with \emph{Galois Counter Mode} (GCM). AES-128 provides 128 security bits and is thus compliant with the specifications we set in the previous section. Additionally, message authentication is also obtained through GCM. GCM has the advantage that it can be parallelised (as opposed to CBC-MAC) and is efficient in both hard- and software \cite{NIST-GCM}.
+
+Because symmetric schemes are typically used in message passing, we will not always explicitly add a symmetric encryption function to depicted schemes. Instead, we will use a different notation to lighten the schemes. \Cref{AuthStep} showcases a symmetric communications channel: the rounded rectangle around A and B denotes a symmetric encryption channel with key $K_S$.
+
+\subsection{Hash Function}
+
+Sometimes a secure hash function must be selected. If a standard allows for its specification, we will always use SHA3-256 as hash function (resulting in 128-bits security). The SHA-3 hash function is relatively recent and its design is radically different compared to well established hashing schemes such as SHA-2. If no alternative can be selected, we will select SHA-256, a flavour of SHA-2 that provides similar security \cite[p.\ 54]{NIST-key-management}.
+
+If no additional comments are made, the hash function $H$ will always be the SHA-3 variant since it is our default hash function choice.
+
+\subsection{Signing Scheme}
+
+EdDSA will be used for signatures because of its improved verification speed compared to other ECC-based verification schemes such as ECDSA. In essence, we will make use of the reference implementation (Ed25519) that uses the Twisted Edwards curve. It is designed to have a security level similar to AES-128 \cite{EdDSA}.
+
+Since we have chosen a dedicated signing scheme (EdDSA), we need to denote it by its own specific function: $S(pr,pu,d)$ where both keys ($pu$, public key and $pr$, private key) are involved and the data $d$ is first hashed using SHA3-256.

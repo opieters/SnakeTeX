@@ -1,0 +1,57 @@
+\section{Node Identification and Security Requirements}
+
+The goal of this report is to discuss how a smartphone app can be used as a key to unlock shared cars. For specific requirements, we refer to the assignment. From this description, we can identify three parties that have to take action in order for the system to operate properly: the user, the company and the car. These parties must be able to have secure communications such that only legitimate users can access the car. We will first discuss the different requirements involved in this communication.
+
+The security measures taken for the communication between different parties must be independent of underlying technologies. We will require that there is a secure connection between two applications. This way, a shift from e.g.\ BLE to NFC is easily achievable. All communications are assumed to be bidirectional and over a reliable communications channel (e.g.\ using TCP) such that messages are not lost and arrive in order.
+
+\begin{figure}[!ht]
+  \centering
+  \begin{tikzpicture}
+    \node[block,rounded corners] (user) at (-2,0) {user};
+    \node[block,rounded corners] (company) at (0,2) {company};
+    \node[block,rounded corners] (car) at (2,0) {car};
+    \draw[{Stealth[scale=2.0]}-{Stealth[scale=2.0]}] (user) -- (company);
+    \draw[{Stealth[scale=2.0]}-{Stealth[scale=2.0]}] (user) -- (car);
+    \draw[{Stealth[scale=2.0]}-{Stealth[scale=2.0]}] (company) -- (car);
+  \end{tikzpicture}
+  \caption{Schematic layout of individual connections between different components}
+  \label{Communication}
+\end{figure}
+
+\subsection{Company -- Car Communication}
+
+Because we cannot assume that the car will be equipped with a mobile communication module, most of the communication between the company and the car will be indirect (through the smartphone application). Only when maintenance is performed, we can assume a direct communications channel is possible.
+
+We will require the following security measures for the direct communication:
+
+\begin{description}
+  \item[confidentiality] Both parties should be able to securely exchange information (e.g.\ diagnostic information). This information might be confidential (such as usage information from users) and should be protected against eavesdropping.
+  \item[authentication] Both parties should be ensured that they are communicating with genuine entities such that sensitive data is not made public.
+  \item[data-integrity] Data should of course be unmodified; this is strongly related to confidentiality.
+\end{description}
+
+We do not require non-repudiation since the car software is operated by the company and we can thus assume that both parties are thrust-worthy. Availability is also less of an issue, because maintenance is usually done using a physical link at a private location. Blocking the communication is more difficult in this case.
+
+\subsection{Company -- User Communication}
+
+Before having access to the car, a user must first contact the company for access. Several measures are required for this to work.
+
+\begin{description}
+  \item[confidentiality] Information will never be directly exchanged (always over an insecure network such as the mobile network). We will require end-to-end encryption for all data-exchanges.
+  \item[authentication] Because communication is indirect (over the internet), both parties must have a method for identification to each other.
+  \item[data-integrity] Data should of course be unmodified; this is very important since messages will typically pass through third-party devices (e.g.\ ISP base towers, routers).
+  \item[availability] The company should deploy measures such that its servers are always operational.
+  \item[non-repudiation] Billing, driving license uploading and car access authorization are some of the actions that both the company and the user should not be able to deny.
+\end{description}
+
+\subsection{User -- Car Communication}
+
+The user, who will drive the car, must also have a secure connection between himself and the car, with the following security measures:
+
+\begin{description}
+	\item[confidentiality] The user will send certificates to e.g.\ open the car. He does not want this information to be shared with others.
+	\item[authentication] The car must be assured the user has been authorised by the company. The user might also want to make sure he is really driving the car he has payed for, thus requiring authentication by both parties.
+	\item[data-integrity] Data cannot be modified in transit; data received by one party should be as it was when it left the other party. Log messages should not be alterable even if an untrusted party can listen in on the communication.
+	\item[non-repudiation] The car (company) nor the user should not be able to deny when and where the car was used.
+	\item[availability] Even in situations where the network is congested (e.g.\ many WiFi hotspots), the car interactions should operate properly.
+\end{description}

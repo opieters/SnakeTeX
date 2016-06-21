@@ -1,0 +1,10 @@
+compiler: pdflatex
+compiler_options: "--file-line-error --synctex=1" # compiler options
+pre_run: "" # commands to run prior to compiling the PDF file
+post_run: "" # command to run after compiltion of PDF output (might take several runs)
+detect_changes: True # recimpiles PDF untill no chnages are observerd.
+source_file: CarKeyApplication.stex
+document:
+  file_name: CarKeyApplication.stex
+  title: Car Key Application
+  author: Olivier Pieters

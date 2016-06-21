@@ -1,0 +1,20 @@
+% !TEX TS-program = pdflatex
+% !TEX encoding = UTF-8 Unicode
+
+{: block preamble :}{: include 'preamble.tex' :}{: endblock :}
+
+\begin{document}
+
+\begin{titlepage}
+{: block titlepage :}{: endblock :}
+\end{titlepage}
+
+{: block precontent :}
+\tableofcontents
+\listoffigures
+\clearpage
+{: endblock :}
+
+{: block content :}{: endblock :}
+
+\end{document}

@@ -1,0 +1,39 @@
+\section{Prototype}
+
+\subsection{Tools and Libraries Used in the Prototype}
+
+We have decided to construct a demo application using the Python programming language (version~3.5 is required). It is practical for prototyping and there is a wide variety of packages available including those used for cryptographic purposes.
+
+Sockets are used to establish communication. First, the necessary keys for RSA and ECC have been generated using OpenSSL (version 0.9.8zh 14 Jan 2016) and are included in \lstinline{certs} folder. Inevitable serialisations are handled by \lstinline{pickle}. We opted not to include actual certificates and only to work with public/private key pairs because it made the prototype easier to set up and less complex (no PKI is needed for instance).
+
+An overview of different libraries that were used to construct the prototype:
+\begin{itemize}
+	\item Encryption toolkit in Python: \url{https://github.com/Legrandin/pycryptodome}
+	\item Elliptic Curve Cryptography in Python: \url{https://github.com/yann2192/pyelliptic}
+	\item Sockets in Python: \url{https://docs.python.org/3/library/socket.html}
+	\item OpenSSL: \url{https://www.openssl.org/}
+	\item Pickle serialisation in Python: \url{https://docs.python.org/3/library/pickle.html}
+	%\item Mininet: \url{http://mininet.org}
+\end{itemize}
+
+\subsection{Overview of Prototype and Functionality}
+
+The prototype consists of three main files representing following entities: user, company and car. Each entity establishes connections described in the previous sections. After a secure connection has been established, interactions can occur. For the initial prototype, we opted to focus mainly on the user interaction to the car and company, and not the car-company interaction during maintenance. As a consequence, the maintenance scheme is not available in the prototype.
+
+After starting all three Python scripts, a menu opens in the user's terminal. Other scripts are listening to commands from the user. The only company-to-user initiated action is the driving license request. To avoid needing to write a second menu and add a listen function to user, we added an extra message from user to company to initiate the request. This simplifies the overall set-up.
+
+Since several facilities are shared between entities (symmetric encryption scheme, signature verification\ldots), a common security package (\lstinline{security.py}) was written to integrate base toolkits and simplify the code. It contains several cryptographic classes.
+
+Following functionalities are conducted in the prototype:
+\begin{itemize}
+	\item Creating secure connection between user and car
+	\item Creating secure connection between user and company
+	\item User -- company authentication
+	\item Driving license upload
+	\item Booking a car
+	\item User -- car authentication
+	\item User -- car sample interaction
+	\item Billing
+\end{itemize}
+
+For the sake of simplicity, not all technical details are implemented. Only the logging (\cref{FinalLogExchange}) prior to the actual billing is available, actual integration with Ogone is out of the scope (of this prototype). Also, the Belgian eID uses SHA-1 hashing. This was replaced by SHA3-256 hash to make verification easier. EdDSA was also replaced by ECDSA because EdDSA was not included in any of the libraries we used and apart from the mathematical operations involved, it is not all that different from ECDSA. The final product should however take all these technical details into account.
