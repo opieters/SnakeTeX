@@ -1,3 +1,7 @@
 *.pyc
 example/build
 site
+.pypirc
+upload.sh
+dist
+SnakeTeX.egg-info
