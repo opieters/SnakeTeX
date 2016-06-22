@@ -1,0 +1,19 @@
+% !TEX TS-program = pdflatex
+% !TEX encoding = UTF-8 Unicode
+\documentclass[11pt, a4paper, english]{article}
+
+{: block preamble :}{: include 'preamble.tex' :}{: endblock :}
+
+\begin{document}
+
+{: block precontent :}
+\maketitle
+
+\tableofcontents
+{: endblock :}
+
+{: block content :}{: endblock :}
+
+{: block postcontent :}{: endblock :}
+
+\end{document}

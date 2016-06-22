@@ -1,0 +1,11 @@
+\documentclass{standalone}
+
+\usepackage{standalone}
+
+{: block preamble :}{: include 'preamble.tex' :}{: endblock :}
+
+\begin{document}
+
+{: block content :}{: endblock :}
+
+\end{document}

@@ -1,0 +1,46 @@
+% general
+\usepackage[l2tabu,orthodox]{nag}                       % force newer (and safer) LaTeX commands
+\usepackage[utf8]{inputenc}                             % set character set to UTF-8 (unicode)
+\usepackage{babel}                                      % multi-language support
+\usepackage{todonotes}                                  % add to do notes
+\usepackage{float}                                      % floats
+\usepackage{amsmath}                                    % extensive math options
+\usepackage{amssymb}                                    % special math symbols
+\usepackage[Gray,squaren,thinqspace,thinspace]{SIunits} % elegant units
+\usepackage[small,bf,hang]{caption}                     % captions
+\usepackage{subcaption}                                 % adds subfigure, subcaption
+\usepackage{hyperref}                                   % add hyperlinks to references
+\usepackage[noabbrev,nameinlink]{cleveref}              % better references than default \ref
+\usepackage{url}                                        % urls
+\usepackage{tikz}                                       % advanced vector graphics
+\usepackage{pgfplots}                                   % data plotting
+\usepackage{graphicx}                                   % include external graphics
+
+% missing math command
+\providecommand{\abs}[1]{\left\lvert#1\right\rvert}
+
+% paragraph indentation
+\setlength{\parindent}{0cm}
+
+% whitespace between paragraphs
+\setlength{\parskip}{2ex plus 0.5ex minus 0.2ex}
+
+% set page margins
+\setlength\paperwidth{20.999cm}
+\setlength\paperheight{29.699cm}
+\setlength\voffset{-1in}
+\setlength\hoffset{-1in}
+\setlength\topmargin{1.499cm}
+\setlength\headheight{12pt}
+\setlength\headsep{1cm}
+\setlength\footskip{1.131cm}
+\setlength\textheight{25cm}
+\setlength\oddsidemargin{2.499cm}
+\setlength\textwidth{15.999cm}
+\setlength{\cftbeforesecskip}{15pt}
+
+% default path for figures
+\graphicspath{{figures/}}
+
+% use most recent version of pgfplots
+\pgfplotsset{compat=newest}
