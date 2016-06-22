@@ -12,11 +12,10 @@ with open(path.join(here, 'README.rst'), encoding='utf-8') as f:
 
 setup(
     name='SnakeTeX',
-    version='0.1',
+    version='0.1.1',
     description='A LaTeX template system for large and multi-user projects.',
     install_requires=['Click', 'jinja2', 'PyYAML'],
-    entry_points={'console_scripts': ['stex=stex:main']},
-    package_dir={'snaketex': 'src'},
+    entry_points={'console_scripts': ['stex=snaketex.stex:main']},
     packages=find_packages(exclude=['example', 'docs', 'tests*']),
     license='GPLv3',
     author='Olivier Pieters',
