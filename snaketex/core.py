@@ -1,7 +1,10 @@
+#!/usr/bin/env python3
+
 import jinja2
 import os, yaml
-from jinja2 import Template
 import subprocess, shutil, hashlib, time
+from jinja2 import nodes
+from jinja2.ext import Extension
 
 class SnakeTeX:
     def __init__(self,config_file="config.yml", debug=True,max_move_up=3):
@@ -14,6 +17,7 @@ class SnakeTeX:
             except FileNotFoundError:
                 if moved_up > max_move_up:
                     raise FileNotFoundError("A configuration file must be specified in the top directory.")
+                moved_up += 1
             config = os.path.join("../", config)
 
         SnakeTeX.__check_config__(self.config)
@@ -47,8 +51,15 @@ class SnakeTeX:
             line_comment_prefix = '%#',
             trim_blocks = True,
             autoescape = False,
+            extensions=[IncludeTeXExtension],
         	newline_sequence = "\r\n" if windows else "\n",
             loader = jinja2.ChoiceLoader(content_dirs))
+
+        # register custom filters
+        #self.env.filters['only_content'] = SnakeTeX.only_content
+
+        self.env.clean_build = self.config["clean_build"] if "clean_build" in self.config else True
+        self.env.skip_build = self.config["skip_build"] if "skip_build" in self.config else []
 
         if os.path.isfile(os.path.join(self.build_directory,self.status_file)):
             self.status = yaml.load(open(os.path.join(self.build_directory,self.status_file)))
@@ -124,7 +135,53 @@ class SnakeTeX:
         with open(os.path.join(self.build_directory,self.status_file),'w') as f:
             f.write(yaml.dump(self.status))
 
-s = SnakeTeX()
-s.compile()
-s.build()
-# http://jinja.pocoo.org/docs/dev/api/
+    def clean(self):
+        shutil.rmtree(self.config['build_directory'])
+
+# based on http://stackoverflow.com/questions/34021437/how-do-you-parse-and-inject-additional-nodes-in-a-jinja-extension and http://www.webforefront.com/django/useandcreatejinjaextensions.html and http://jinja.pocoo.org/docs/dev/extensions/#extension-api
+class IncludeTeXExtension(jinja2.ext.Extension):
+    tags = set(['include_tex'])
+
+    def __init__(self, environment):
+        super(IncludeTeXExtension, self).__init__(environment)
+
+        # add the defaults to the environment
+        environment.extend(skip_build=[],clean_build=False)
+
+    def parse(self, parser):
+        tag = parser.stream.current.value
+        lineno = next(parser.stream).lineno
+        args, kwargs = self.parse_args(parser)
+
+        return nodes.Output([self.call_method('_include_tex', args, kwargs)], lineno=lineno)
+
+    def parse_args(self, parser):
+        args = []
+        kwargs = []
+        require_comma = False
+
+        while parser.stream.current.type != 'block_end':
+            if require_comma:
+                parser.stream.expect('comma')
+
+            if parser.stream.current.type == 'name' and parser.stream.look().type == 'assign':
+                key = parser.stream.current.value
+                parser.stream.skip(2)
+                value = parser.parse_expression()
+                kwargs.append(nodes.Keyword(key, value, lineno=value.lineno))
+            else:
+                if kwargs:
+                    parser.fail('Invalid argument syntax for WrapExtension tag',
+                                parser.stream.current.lineno)
+                args.append(parser.parse_expression())
+
+            require_comma = True
+
+        return args, kwargs
+
+    @jinja2.contextfunction
+    def _include_tex(self, context, template, *args, **kwargs):
+        if 'recipe' in kwargs and kwargs['recipe'] in self.environment.skip_build and not self.environment.clean_build:
+            return ''
+        else:
+            return self.environment.get_template(template).render(dict(context, **kwargs))
