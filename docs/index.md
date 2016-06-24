@@ -1,17 +1,11 @@
-# Welcome to MkDocs
+# Welcome to SnakeTeX
 
-For full documentation visit [mkdocs.org](http://mkdocs.org).
+SnakeTeX allows LaTeX users to use HTML-like templating in their projects. The aim of the project is to write complicated documents faster and in a more user-friendly manner.
 
-## Commands
+## A Minimal Working Example (MWE)
 
-* `mkdocs new [dir-name]` - Create a new project.
-* `mkdocs serve` - Start the live-reloading docs server.
-* `mkdocs build` - Build the documentation site.
-* `mkdocs help` - Print this help message.
+TODO
 
-## Project layout
+## Continue Reading
 
-    mkdocs.yml    # The configuration file.
-    docs/
-        index.md  # The documentation homepage.
-        ...       # Other markdown pages, images and other files.
+All details of the SnakeTeX template syntax are documented in the [basics section](snaketex.md). The full command line interface is discussed in [here](cli.md) and people who want to build on the core framework, there also is [documentation for that](core.md). 

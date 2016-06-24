@@ -1,1 +1,8 @@
 site_name: SnakeTex
+pages:
+  - Home: index.md
+  - Basics: snaketex.md
+  - CLI: cli.md
+  - Core: core.md
+  - About: about.md
+theme: readthedocs
