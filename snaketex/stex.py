@@ -5,7 +5,7 @@ import snaketex.core as stex
 
 @click.group()
 @click.option('--config', default="config.yml", help="Configuration file.")
-@click.option('--debug', default=False, help="Debug mode.")
+@click.option('--debug', is_flag=True, help="Debug mode.")
 @click.pass_context
 def cli(ctx, config, debug):
     """SnakTeX command line interface - write LaTeX faster through templating."""
