@@ -12,7 +12,7 @@ with open(path.join(here, 'README.rst'), encoding='utf-8') as f:
 
 setup(
     name='SnakeTeX',
-    version='0.1.2',
+    version='0.1.3',
     description='A LaTeX template system for large and multi-user projects.',
     long_description=long_description,
     install_requires=['click', 'Jinja2', 'PyYAML'],
