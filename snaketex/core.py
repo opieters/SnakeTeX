@@ -59,6 +59,7 @@ class SnakeTeX:
         #self.env.filters['only_content'] = SnakeTeX.only_content
 
         self.env.clean_build = self.config["clean_build"] if "clean_build" in self.config else True
+        self.env.full_build = self.config["full_build"] if "full_build" in self.config else True
         self.env.skip_build = self.config["skip_build"] if "skip_build" in self.config else []
 
         if os.path.isfile(os.path.join(self.build_directory,self.status_file)):
@@ -146,7 +147,7 @@ class IncludeTeXExtension(jinja2.ext.Extension):
         super(IncludeTeXExtension, self).__init__(environment)
 
         # add the defaults to the environment
-        environment.extend(skip_build=[],clean_build=False)
+        environment.extend(skip_build=[],full_build=False)
 
     def parse(self, parser):
         tag = parser.stream.current.value
@@ -181,7 +182,55 @@ class IncludeTeXExtension(jinja2.ext.Extension):
 
     @jinja2.contextfunction
     def _include_tex(self, context, template, *args, **kwargs):
-        if 'recipe' in kwargs and kwargs['recipe'] in self.environment.skip_build and not self.environment.clean_build:
+        if 'build' in kwargs and kwargs['build'] in self.environment.skip_build and not self.environment.full_build:
             return ''
         else:
             return self.environment.get_template(template).render(dict(context, **kwargs))
+
+# based on http://stackoverflow.com/questions/34021437/how-do-you-parse-and-inject-additional-nodes-in-a-jinja-extension and http://www.webforefront.com/django/useandcreatejinjaextensions.html and http://jinja.pocoo.org/docs/dev/extensions/#extension-api
+class ExternalBuildTeXExtension(jinja2.ext.Extension):
+    tags = set(['extern_tex'])
+
+    def __init__(self, environment):
+        super(IncludeTeXExtension, self).__init__(environment)
+
+        # add the defaults to the environment
+        environment.extend(skip_build=[],clean_build=False)
+
+    def parse(self, parser):
+        tag = parser.stream.current.value
+        lineno = next(parser.stream).lineno
+        args, kwargs = self.parse_args(parser)
+
+        return nodes.Output([self.call_method('_include_pdf', args, kwargs)], lineno=lineno)
+
+    def parse_args(self, parser):
+        args = []
+        kwargs = []
+        require_comma = False
+
+        while parser.stream.current.type != 'block_end':
+            if require_comma:
+                parser.stream.expect('comma')
+
+            if parser.stream.current.type == 'name' and parser.stream.look().type == 'assign':
+                key = parser.stream.current.value
+                parser.stream.skip(2)
+                value = parser.parse_expression()
+                kwargs.append(nodes.Keyword(key, value, lineno=value.lineno))
+            else:
+                if kwargs:
+                    parser.fail('Invalid argument syntax for WrapExtension tag',
+                                parser.stream.current.lineno)
+                args.append(parser.parse_expression())
+
+            require_comma = True
+
+        return args, kwargs
+
+    @jinja2.contextfunction
+    def _include_pdf(self, context, template, *args, **kwargs):
+        if self.environment.clean_build or 'file' not in kwargs:
+            return ''
+        else:
+            return '\\include{%s}' % kwargs['file']
